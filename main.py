@@ -1,18 +1,17 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-import requests
 import uuid
 from langchain.llms import Ollama
-from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
 from langchain.agents import initialize_agent, Tool
 from langchain.agents import AgentType
+from langchain.schema import AIMessage, HumanMessage
 
 app = FastAPI()
 
-# In-memory session store
-sessions: Dict[str, List[Dict[str, str]]] = {}
+# Session store
+sessions: Dict[str, Dict[str, any]] = {}
 
 # --- Models ---
 class ChatRequest(BaseModel):
@@ -24,85 +23,98 @@ class ChatResponse(BaseModel):
     response: str
     history: List[Dict[str, str]]
 
-# --- Helper functions ---
+def create_agent_with_memory():
+    llm = Ollama(base_url="http://localhost:11434", model="llama3.2:3b")
+    
+    tools = [
+        Tool(name="Weather", func=weather_tool, description="Get weather info"),
+        Tool(name="Cricket", func=cricket_tool, description="Get cricket score"),
+        Tool(name="News", func=news_tool, description="Get top 10 news"),
+        Tool(name="Flights", func=flights_tool, description="Get flight details"),
+    ]
+    
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    
+    agent = initialize_agent(
+        tools,
+        llm,
+        agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+        memory=memory,
+        verbose=True,
+    )
+    return agent, memory
+
 def get_or_create_session(sessionid: Optional[str]) -> str:
     if sessionid and sessionid in sessions:
         return sessionid
+    
     new_id = str(uuid.uuid4())
-    sessions[new_id] = []
+    agent, memory = create_agent_with_memory()
+    
+    sessions[new_id] = {
+        "history": [],
+        "agent": agent,
+        "memory": memory
+    }
     return new_id
 
-# --- Hardcoded APIs ---
-@app.get("/weather")
-def get_weather():
-    return {"location": "Delhi", "forecast": "Sunny", "temperature": "35C"}
-
-@app.get("/cricket")
-def get_cricket():
-    return {"match": "India vs Australia", "score": "250/3", "status": "India batting"}
-
-@app.get("/news")
-def get_news():
-    return {"top_10_news": [f"News {i}" for i in range(1, 11)]}
-
-@app.get("/flights")
-def get_flights():
-    return {"flight": "AI202", "status": "On Time", "departure": "Delhi", "arrival": "Mumbai"}
-
-# --- LangChain LLM Setup ---
-ollama_llm = Ollama(base_url="http://localhost:11434", model="llama3.2:3b")
-memory = ConversationBufferMemory()
-
-# --- Tool functions for LangChain ---
+# --- Tool functions ---
 def weather_tool(_):
-    return str(get_weather())
+    return str({"location": "Delhi", "forecast": "Sunny", "temperature": "35C"})
+
 def cricket_tool(_):
-    return str(get_cricket())
+    return str({"match": "India vs Australia", "score": "250/3", "status": "India batting"})
+
 def news_tool(_):
-    return str(get_news())
+    return str({"top_10_news": [f"News {i}" for i in range(1, 11)]})
+
 def flights_tool(_):
-    return str(get_flights())
+    return str({"flight": "AI202", "status": "On Time", "departure": "Delhi", "arrival": "Mumbai"})
 
-# Register tools for agent
-langchain_tools = [
-    Tool(name="Weather", func=weather_tool, description="Get weather info"),
-    Tool(name="Cricket", func=cricket_tool, description="Get cricket score"),
-    Tool(name="News", func=news_tool, description="Get top 10 news"),
-    Tool(name="Flights", func=flights_tool, description="Get flight details"),
-]
-
-agent = initialize_agent(
-    langchain_tools,
-    ollama_llm,
-    agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-    memory=memory,
-    verbose=False,
-)
-
-# --- Chatbot API ---
+# --- API Endpoints ---
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     sessionid = get_or_create_session(request.sessionid)
-    history = sessions[sessionid]
+    session_data = sessions[sessionid]
+    history = session_data["history"]
+    agent = session_data["agent"]
+    memory = session_data["memory"]
+    
+    # Add to history before processing
     history.append({"user": request.message})
-
-    # Use LangChain agent to determine context and run tools
-    memory.chat_memory.messages = []
-    for msg in history:
-        if "user" in msg:
-            memory.chat_memory.add_user_message(msg["user"])
-        if "bot" in msg:
-            memory.chat_memory.add_ai_message(msg["bot"])
+    
     try:
-        bot_reply = agent.invoke(
-            {
-                "input": request.message,
-                "chat_history": memory.buffer
-            }
-        )
+        # Manually add to memory
+        memory.chat_memory.add_user_message(request.message)
+        
+        # Get response
+        bot_reply = agent.run(input=request.message)
+        
+        # Add to memory
+        memory.chat_memory.add_ai_message(bot_reply)
     except Exception as e:
-        bot_reply = f"Agent error: {e}"
+        bot_reply = f"Sorry, I encountered an error: {str(e)}"
+    
     history.append({"bot": bot_reply})
-    sessions[sessionid] = history
-    return ChatResponse(sessionid=sessionid, response=bot_reply, history=history)
+    
+    return ChatResponse(
+        sessionid=sessionid,
+        response=bot_reply,
+        history=history
+    )
 
+@app.get("/weather")
+def get_weather():
+    return weather_tool(None)
+
+@app.get("/cricket")
+def get_cricket():
+    return cricket_tool(None)
+
+@app.get("/news")
+def get_news():
+    return news_tool(None)
+
+@app.get("/flights")
+def get_flights():
+    return flights_tool(None)
