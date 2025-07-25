@@ -34,7 +34,7 @@ class ChatResponse(BaseModel):
     history: List[Dict[str, str]]
 
 # Initialize embeddings and vector store
-embeddings = OllamaEmbeddings(base_url="http://localhost:11434", model="llama3.2:3b")
+embeddings = OllamaEmbeddings(base_url="http://localhost:11434", model="qwen3:4b")
 persist_directory = "rapipay_loan_db"
 
 def initialize_vector_db():
@@ -80,7 +80,7 @@ def rapipay_loan_tool(query: str) -> str:
         return f"Error searching loan info: {str(e)}"
 
 def create_agent_with_memory():
-    llm = Ollama(base_url="http://localhost:11434", model="llama3.2:3b")
+    llm = Ollama(base_url="http://localhost:11434", model="qwen3:4b")
     
     tools = [
         Tool(name="Weather", func=weather_tool, description="Get weather info"),
