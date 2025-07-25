@@ -1,0 +1,13 @@
+
+Rapipay Personal Loan Interest Rates:
+- For salaried individuals: 10.5% to 18% p.a.
+- For self-employed: 12% to 20% p.a.
+- Processing fee: 1.5% of loan amount or ₹3000, whichever is higher
+
+Gold Loan Rates:
+- Interest rate: 12% p.a. with 75% LTV
+- Processing fee: 1% of loan amount
+
+EMI Calculator:
+- EMI = [P x R x (1+R)^N]/[(1+R)^N-1]
+Where P=Principal, R=Monthly interest rate, N=Tenure in months
