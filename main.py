@@ -13,12 +13,23 @@ from langchain.document_loaders import DirectoryLoader, TextLoader
 import os
 from datetime import datetime, timedelta
 import logging
+from fastapi.middleware.cors import CORSMiddleware
+from langchain.tools import StructuredTool
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify ["http://localhost:8000"] for more security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Session store
 sessions: Dict[str, Dict[str, any]] = {}
@@ -83,10 +94,26 @@ def create_agent_with_memory():
     llm = Ollama(base_url="http://localhost:11434", model="qwen3:4b")
     
     tools = [
-        Tool(name="Weather", func=weather_tool, description="Get weather info"),
-        Tool(name="Cricket", func=cricket_tool, description="Get cricket score"),
-        Tool(name="News", func=news_tool, description="Get top 10 news"),
-        Tool(name="Flights", func=flights_tool, description="Get flight details"),
+        StructuredTool.from_function(
+            weather_tool,
+            name="Weather",
+            description="Get weather info for a city.",
+        ),
+        StructuredTool.from_function(
+            cricket_tool,
+            name="Cricket",
+            description="Get cricket score for two teams.",
+        ),
+        StructuredTool.from_function(
+            news_tool,
+            name="News",
+            description="Get top 10 news for a country.",
+        ),
+        StructuredTool.from_function(
+            flights_tool,
+            name="Flights",
+            description="Get flight details between two cities.",
+        ),
         Tool(
             name="RapipayLoans",
             func=rapipay_loan_tool,
@@ -99,7 +126,7 @@ def create_agent_with_memory():
     agent = initialize_agent(
         tools,
         llm,
-        agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory=memory,
         verbose=True,
     )
@@ -130,17 +157,29 @@ def cleanup_old_sessions(hours=2):
     logger.info(f"Cleaned up {len(expired)} expired sessions")
 
 # --- Tool functions ---
-def weather_tool(_):
-    return str({"location": "Delhi", "forecast": "Sunny", "temperature": "35C"})
+def weather_tool(city: str):
+    if not city:
+        raise ValueError("City is required for weather info.")
+    # Example response, replace with actual API if needed
+    return str({"location": city, "forecast": "Sunny", "temperature": "35C"})
 
-def cricket_tool(_):
-    return str({"match": "India vs Australia", "score": "250/3", "status": "India batting"})
+def cricket_tool(team1: str, team2: str):
+    if not team1 or not team2:
+        raise ValueError("Both team names are required for cricket score.")
+    # Example response, replace with actual API if needed
+    return str({"match": f"{team1} vs {team2}", "score": "250/3", "status": f"{team1} batting"})
 
-def news_tool(_):
-    return str({"top_10_news": [f"News {i}" for i in range(1, 11)]})
+def news_tool(country: str):
+    if not country:
+        raise ValueError("Country is required for news.")
+    # Example response, replace with actual API if needed
+    return str({"country": country, "top_10_news": [f"News {i}" for i in range(1, 11)]})
 
-def flights_tool(_):
-    return str({"flight": "AI202", "status": "On Time", "departure": "Delhi", "arrival": "Mumbai"})
+def flights_tool(source: str, destination: str):
+    if not source or not destination:
+        raise ValueError("Source and destination cities are required for flight details.")
+    # Example response, replace with actual API if needed
+    return str({"flight": "AI202", "status": "On Time", "departure": source, "arrival": destination})
 
 # --- API Endpoints ---
 @app.post("/chat", response_model=ChatResponse)

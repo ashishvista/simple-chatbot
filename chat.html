@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        #chat-box { border: 1px solid #ccc; padding: 20px; height: 400px; overflow-y: auto; background: #fafafa; }
+        .user { color: #0074D9; margin-bottom: 8px; }
+        .bot { color: #2ECC40; margin-bottom: 16px; }
+        #input-area { margin-top: 20px; }
+        #message { width: 80%; padding: 8px; }
+        #send { padding: 8px 16px; }
+    </style>
+</head>
+<body>
+    <h2>Simple Chatbot</h2>
+    <div id="chat-box"></div>
+    <div id="input-area">
+        <input type="text" id="message" placeholder="Type your message..." autofocus />
+        <button id="send">Send</button>
+    </div>
+    <script>
+        let sessionid = null;
+        const chatBox = document.getElementById('chat-box');
+        const messageInput = document.getElementById('message');
+        const sendBtn = document.getElementById('send');
+
+        function renderHistory(history) {
+            chatBox.innerHTML = '';
+            history.forEach(item => {
+                if (item.user) {
+                    chatBox.innerHTML += `<div class="user"><strong>You:</strong> ${item.user}</div>`;
+                }
+                if (item.bot) {
+                    chatBox.innerHTML += `<div class="bot"><strong>Bot:</strong> ${item.bot}</div>`;
+                }
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const msg = messageInput.value.trim();
+            if (!msg) return;
+            sendBtn.disabled = true;
+            try {
+                const res = await fetch('http://localhost:8000/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionid, message: msg })
+                });
+                if (!res.ok) throw new Error('API error');
+                const data = await res.json();
+                sessionid = data.sessionid;
+                renderHistory(data.history);
+                messageInput.value = '';
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        sendBtn.onclick = sendMessage;
+        messageInput.onkeydown = e => { if (e.key === 'Enter') sendMessage(); };
+    </script>
+</body>
+</html>
