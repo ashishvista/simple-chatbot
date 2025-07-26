@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import os
 import logging
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
@@ -20,6 +21,13 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import create_react_agent
 from langchain_ollama.chat_models import ChatOllama
 from langchain import hub
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get model names from environment variables
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:4b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen3:4b")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -52,7 +60,7 @@ class AgentState(TypedDict):
     intermediate_steps: Annotated[list[tuple[AgentAction, str]], operator.add]
 
 # --- Embeddings and Vector DB ---
-embeddings = OllamaEmbeddings(base_url="http://localhost:11434", model="qwen3:4b")
+embeddings = OllamaEmbeddings(base_url="http://localhost:11434", model=EMBEDDING_MODEL)
 persist_directory = "rapipay_loan_db"
 
 def initialize_vector_db():
@@ -127,7 +135,7 @@ tools = [rapipay_loan_tool, weather_tool, cricket_tool, news_tool, flights_tool]
 llm = ChatOllama(
     base_url="http://localhost:11434",
     temperature=0,
-    model="qwen3:4b",
+    model=LLM_MODEL,
     system="You are a helpful assistant that can use tools to answer questions about finance, weather, sports, and travel."
 )
 agent_runnable = create_react_agent(
