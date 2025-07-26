@@ -2,19 +2,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import uuid
-from langchain.llms import Ollama
-from langchain.memory import ConversationBufferMemory
-from langchain.agents import initialize_agent, Tool
-from langchain.agents import AgentType
-from langchain.vectorstores import Chroma
-from langchain.embeddings import OllamaEmbeddings
+from langchain_ollama.llms import OllamaLLM
+from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import DirectoryLoader, TextLoader
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
 import os
 from datetime import datetime, timedelta
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.tools import StructuredTool
+from langchain.memory.buffer import ConversationBufferMemory
+from langchain.agents import initialize_agent, AgentType
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -91,7 +90,11 @@ def rapipay_loan_tool(query: str) -> str:
         return f"Error searching loan info: {str(e)}"
 
 def create_agent_with_memory():
-    llm = Ollama(base_url="http://localhost:11434", model="qwen3:4b")
+    llm = OllamaLLM(
+        base_url="http://localhost:11434",
+        model="qwen3:4b",
+        system="You are a helpful financial advisor bot. You only answer questions related to finance and banking. If asked about anything else, politely refuse and say you can only help with finance and banking topics."
+    )
     
     tools = [
         StructuredTool.from_function(
@@ -114,14 +117,15 @@ def create_agent_with_memory():
             name="Flights",
             description="Get flight details between two cities.",
         ),
-        Tool(
+        StructuredTool.from_function(
             name="RapipayLoans",
             func=rapipay_loan_tool,
             description="Useful for questions about loan interest rates, EMIs, or loan products from Rapipay"
         )
     ]
     
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    memory = ConversationBufferMemory()
+    # Remove memory.chat_memory.add_ai_message(system_instruction)
     
     agent = initialize_agent(
         tools,
@@ -190,26 +194,30 @@ def chat(request: ChatRequest):
         history = session_data["history"]
         agent = session_data["agent"]
         memory = session_data["memory"]
-        
+
         if not request.message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
-        
         history.append({"user": request.message})
-        
+
         try:
             memory.chat_memory.add_user_message(request.message)
-            bot_reply = agent.run(input=request.message)
-            memory.chat_memory.add_ai_message(bot_reply)
+            bot_reply = agent.invoke({"input": request.message})
+            # Ensure bot_reply is a string for memory and response
+            if isinstance(bot_reply, dict) and "output" in bot_reply:
+                reply_text = bot_reply["output"]
+            else:
+                reply_text = str(bot_reply)
+            memory.chat_memory.add_ai_message(reply_text)
         except Exception as e:
             logger.error(f"Agent error: {str(e)}", exc_info=True)
-            bot_reply = "Sorry, I'm having trouble processing your request. Please try again."
-        
-        history.append({"bot": bot_reply})
+            reply_text = "Sorry, I'm having trouble processing your request. Please try again."
+
+        history.append({"bot": reply_text})
         cleanup_old_sessions()
-        
+
         return ChatResponse(
             sessionid=sessionid,
-            response=bot_reply,
+            response=reply_text,
             history=history
         )
     except Exception as e:
