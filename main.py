@@ -136,17 +136,31 @@ llm = ChatOllama(
     base_url="http://localhost:11434",
     temperature=0,
     model=LLM_MODEL,
-    system="You are a helpful assistant that can use tools to answer questions about finance, weather, sports, and travel."
+    system="You are a helpful assistant that can use tools to answer questions about finance, weather, sports, and travel.",
+    verbose=True
 )
+
+# Use the default prompt for create_react_agent (do not override with hub.pull)
 agent_runnable = create_react_agent(
     llm,
-    tools=tools,
-    prompt=hub.pull("hwchase17/react")
+    tools=tools
 )
 
 def run_agent(state: AgentState):
-    outcome = agent_runnable.invoke(state)
-    return {"agent_outcome": outcome}
+    try:
+        logger.info(f"LLM REQUEST INPUT: {state['input']}")
+        logger.info(f"LLM CHAT HISTORY: {state['chat_history']}")
+        # Pass the state dict directly to agent_runnable (not just messages)
+        outcome = agent_runnable.invoke(state)
+        if outcome is None:
+            raise ValueError("No data received from Ollama stream.")
+        return {"agent_outcome": outcome}
+    except Exception as e:
+        logger.error(f"Ollama LLM error: {str(e)}", exc_info=True)
+        return {"agent_outcome": AgentFinish(
+            return_values={"output": "Sorry, I couldn't get a response from the model. Please try again later."},
+            log="Ollama returned no data."
+        )}
 
 def execute_tool(state: AgentState):
     action = state["agent_outcome"]
