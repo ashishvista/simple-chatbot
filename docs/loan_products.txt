@@ -1,0 +1,22 @@
+
+Rapipay Loan Products:
+
+1. Personal Loan:
+   - Amount: ₹50,000 to ₹15,00,000
+   - Tenure: 1 to 5 years
+   - Features: Quick disbursal, minimal documentation
+
+2. Gold Loan:
+   - Amount: Up to 75% of gold value
+   - Tenure: 3 months to 3 years
+   - Features: Gold safe custody, instant approval
+
+3. Business Loan:
+   - Amount: ₹2,00,000 to ₹50,00,000
+   - Tenure: 6 months to 7 years
+   - Features: Flexible repayment, top-up facility
+
+4. Education Loan:
+   - Amount: Up to ₹20,00,000
+   - Tenure: Up to 10 years
+   - Features: Moratorium period available
