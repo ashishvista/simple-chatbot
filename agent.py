@@ -1,4 +1,4 @@
-from typing import Annotated, Union, List
+from typing import Annotated, Union, List, TypedDict
 import operator
 import os
 import logging
@@ -6,8 +6,9 @@ from langchain_core.messages import HumanMessage, BaseMessage
 from langchain_core.agents import AgentAction, AgentFinish
 from langgraph.graph import StateGraph, END
 from langchain_ollama.chat_models import ChatOllama
-from langgraph.prebuilt import create_react_agent
-from .tools import tools
+# from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_react_agent
+from tools import tools
 import langchain
 from dotenv import load_dotenv
 from langchain import hub
@@ -15,6 +16,8 @@ from langchain import hub
 
 load_dotenv()
 langchain.debug = True
+# Create a tool lookup dictionary for easy access
+tool_lookup = {tool.name: tool for tool in tools}
 # Get model names from environment variables
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:4b")
 
@@ -62,7 +65,7 @@ def execute_tools(state: AgentState):
 
 def should_continue(state: AgentState):
     action = state["agent_outcome"]
-    return "continue" if isinstance(action, AgentAction) else END
+    return "continue" if isinstance(action, AgentAction) else "end"
 
 workflow = StateGraph(AgentState)
 workflow.add_node("agent", run_agent)

@@ -9,10 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from langchain_core.agents import AgentAction, AgentFinish
 
-from .agent import (
-    agent_workflow,
-)
-from .vectordb import vectordb
+from agent import agent_workflow
+from vectordb import vectordb
 
 # Load environment variables from .env file
 load_dotenv()
