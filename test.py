@@ -4,6 +4,7 @@ from typing import Annotated, TypedDict, Union
 
 from dotenv import load_dotenv
 from langchain import hub
+import langchain
 from langchain.agents import create_react_agent
 from langchain_community.chat_models import ChatOllama
 from langchain_core.agents import AgentAction, AgentFinish
@@ -12,6 +13,7 @@ from langchain_core.tools import tool
 from langgraph.graph import END, StateGraph
 
 load_dotenv()
+langchain.debug = True
 
 @tool
 def get_now(format: str = "%Y-%m-%d %H:%M:%S"):
@@ -35,14 +37,14 @@ prompt = hub.pull("hwchase17/react")
 agent_runnable = create_react_agent(model, tools, prompt)
 
 def execute_tools(state):
-    print("Called `execute_tools`")
+    # print("Called `execute_tools`")
     agent_action = state["agent_outcome"]
     
     if not isinstance(agent_action, AgentAction):
         raise ValueError("Expected AgentAction")
     
     tool_name = agent_action.tool
-    print(f"Calling tool: {tool_name}")
+    # print(f"Calling tool: {tool_name}")
 
     # Get the tool from our tools dictionary
     selected_tool = tool_lookup[tool_name]
@@ -83,6 +85,6 @@ results = []
 for s in app.stream(inputs):
     result = list(s.values())[0]
     results.append(result)
-    print("----start------")
-    print(result)
-    print("---end------")
+    # print("----start------")
+    # print(result)
+    # print("---end------")
