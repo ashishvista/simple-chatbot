@@ -31,7 +31,11 @@ def weather_tool(city: str) -> str:
 
 @tool
 def cricket_tool(team1: str, team2: str) -> str:
-    """Get cricket match scores."""
+    """Get cricket match scores.
+    Args:
+        team1 (str): Name of the first cricket team.
+        team2 (str): Name of the second cricket team.
+    """
     if not team1 or not team2:
         raise ValueError("Both team names are required for cricket score.")
     return str({"match": f"{team1} vs {team2}", "score": "250/3", "status": f"{team1} batting"})
