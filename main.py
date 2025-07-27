@@ -8,6 +8,7 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from agent import agent_workflow
 from vectordb import vectordb
@@ -76,17 +77,15 @@ async def chat(request: ChatRequest):
 
         try:
             initial_state = {
-                "input": request.message,
-                "chat_history": [],
-                "agent_outcome": None,
-                "intermediate_steps": []
-            }
-            result = await agent_workflow.ainvoke(initial_state)
+            "messages": [HumanMessage(content=request.message)]
+}
+            # result = await agent_workflow.ainvoke(initial_state)
             # Find the final answer from agent_outcome or intermediate_steps
-            reply_text = ""
-            if result.get("agent_outcome") and isinstance(result["agent_outcome"], AgentFinish):
-                reply_text = result["agent_outcome"].return_values.get("output", "")
+            state = agent_workflow.invoke(initial_state)
+            for m in state["messages"]:
+                m.pretty_print()
 
+            reply_text = unwrap_final(state)
             history.append({"bot": reply_text})
         except Exception as e:
             logger.error(f"Agent error: {str(e)}", exc_info=True)
@@ -102,3 +101,17 @@ async def chat(request: ChatRequest):
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+def unwrap_final(state):
+    from langchain_core.messages import AIMessage
+               # Extract the final AIMessage
+    final_ai = next(
+        (msg for msg in reversed(state["messages"]) if isinstance(msg, AIMessage)), 
+        None
+    )
+    content = final_ai.content
+    if "</think>" in content:
+        answer = content.split("</think>", 1)[1].strip()
+    else:
+        answer = content
+    return answer

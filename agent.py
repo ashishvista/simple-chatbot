@@ -1,8 +1,8 @@
-from typing import Annotated, Union, List, TypedDict
+from typing import Annotated, Union, List, TypedDict, Sequence
 import operator
 import os
 import logging
-from langchain_core.messages import HumanMessage, BaseMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from langchain_core.agents import AgentAction, AgentFinish
 from langgraph.graph import StateGraph, END
 from langchain_ollama.chat_models import ChatOllama
@@ -12,7 +12,7 @@ from tools import tools
 import langchain
 from dotenv import load_dotenv
 from langchain import hub
-
+from langgraph.graph import StateGraph, START
 
 load_dotenv()
 langchain.debug = True
@@ -30,47 +30,63 @@ class AgentState(TypedDict):
     agent_outcome: Union[AgentAction, AgentFinish, None]
     intermediate_steps: Annotated[List[tuple[AgentAction, str]], operator.add]
 
-llm = ChatOllama(
-    base_url="http://localhost:11434",
-    temperature=0,
+# llm = ChatOllama(
+#     base_url="http://localhost:11434",
+#     temperature=0,
+#     model=LLM_MODEL,
+#     # system="You are a helpful assistant that can use tools to answer questions about finance, weather, sports, and travel.",
+# )
+# prompt = hub.pull("hwchase17/react")
+
+# agent_runnable = create_react_agent(
+#     llm,
+#     tools,
+#     prompt
+# )
+
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(
     model=LLM_MODEL,
-    # system="You are a helpful assistant that can use tools to answer questions about finance, weather, sports, and travel.",
-)
-prompt = hub.pull("hwchase17/react")
-
-agent_runnable = create_react_agent(
-    llm,
-    tools,
-    prompt
+    base_url="http://localhost:11434/v1",
+    api_key="unused",
+    temperature=0.6
 )
 
-def run_agent(state: AgentState):
-    agent_outcome = agent_runnable.invoke(state)
-    return {"agent_outcome": agent_outcome}
-def execute_tools(state: AgentState):
- # print("Called `execute_tools`")
-    agent_action = state["agent_outcome"]
-    
-    if not isinstance(agent_action, AgentAction):
-        raise ValueError("Expected AgentAction")
-    
-    tool_name = agent_action.tool
-    # print(f"Calling tool: {tool_name}")
 
-    # Get the tool from our tools dictionary
-    selected_tool = tool_lookup[tool_name]
-    # Call the tool directly with the tool input
-    response = selected_tool.invoke(agent_action.tool_input)
-    return {"intermediate_steps": [(agent_action, response)]}
 
-def should_continue(state: AgentState):
-    action = state["agent_outcome"]
-    return "continue" if isinstance(action, AgentAction) else "end"
+model=llm.bind_tools(tools)
 
-workflow = StateGraph(AgentState)
-workflow.add_node("agent", run_agent)
-workflow.add_node("action", execute_tools)
-workflow.set_entry_point("agent")
-workflow.add_conditional_edges("agent", should_continue, {"continue": "action", "end": END})
-workflow.add_edge("action", "agent")
-agent_workflow = workflow.compile()
+
+class MessagesState(TypedDict):
+    messages: Annotated[Sequence[BaseMessage], ...]  # for state
+
+def call_llm(state: MessagesState) -> MessagesState:
+    system = SystemMessage(content="You are a helpful assistant.")
+    response = model.invoke([system] + state["messages"])
+    return {"messages": [*state["messages"], response]}
+
+def call_tools(state: MessagesState) -> MessagesState:
+    # Extract tool calls from the last AI message
+    from langchain_core.messages import ToolMessage
+    msgs = state["messages"]
+    ai_msg = msgs[-1]
+    results = []
+    for tool_call in ai_msg.tool_calls:
+        tool_fn = tool_lookup.get(tool_call["name"])
+        obs = tool_fn.invoke(tool_call["args"])
+        results.append(ToolMessage(content=str(obs), tool_call_id=tool_call["id"]))
+    return {"messages": [*msgs, *results]}
+
+from langgraph.graph import END
+def should_continue(state: MessagesState) -> str:
+    return "Action" if state["messages"][-1].tool_calls else END
+
+graph = StateGraph(MessagesState)
+graph.add_node("llm", call_llm)
+graph.add_node("action", call_tools)
+graph.add_edge(START, "llm")
+graph.add_conditional_edges("llm", should_continue, {"Action": "action", END: END})
+graph.add_edge("action", "llm")
+
+agent_workflow = graph.compile()
