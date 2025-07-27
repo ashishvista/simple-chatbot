@@ -7,7 +7,7 @@ from langchain_community.document_loaders import DirectoryLoader, TextLoader
 import logging
 
 load_dotenv()
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen3:4b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
 embeddings = OllamaEmbeddings(base_url="http://localhost:11434", model=EMBEDDING_MODEL)
 persist_directory = "rapipay_loan_db"
 

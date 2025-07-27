@@ -19,7 +19,7 @@ langchain.debug = True
 # Create a tool lookup dictionary for easy access
 tool_lookup = {tool.name: tool for tool in tools}
 # Get model names from environment variables
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:4b")
+LLM_MODEL = os.getenv("LLM_MODEL")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

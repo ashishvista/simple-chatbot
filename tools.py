@@ -1,14 +1,9 @@
 from langchain_core.tools import tool
-
-def get_vectordb():
-    # Import here to avoid circular import
-    from .main import vectordb
-    return vectordb
+from vectordb import vectordb
 
 @tool
 def rapipay_loan_tool(query: str) -> str:
     """Useful for questions about loan interest rates, EMIs, or loan products from Rapipay"""
-    vectordb = get_vectordb()
     try:
         docs = vectordb.similarity_search(query, k=3)
         result = ["Here's what I found about Rapipay loans:"]
