@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph, START
 import httpx
 import requests
 from mcp_client import call_mcp_tool
-
+import langchain
 load_dotenv()
 # Create a tool lookup dictionary for easy access
 tool_lookup = {tool.name: tool for tool in tools}
@@ -29,17 +29,32 @@ class LoggingHTTPTransport(httpx.HTTPTransport):
 
 # Create a custom httpx.Client with the logging transport
 httpx_client = httpx.Client(transport=LoggingHTTPTransport())
-# langchain.debug = True
+langchain.debug = True
 
 from langchain_openai import ChatOpenAI
 
-llm = ChatOpenAI(
-    model=LLM_MODEL,
-    base_url="http://localhost:11434/v1",
-    api_key="unused",
-    temperature=0.6,
-    http_client=httpx_client  # Pass the custom client for logging
-)
+class LLMConfig:
+    def __init__(self, use_httpx_client: bool = False):
+        self.model = LLM_MODEL
+        self.base_url = os.getenv("OLLAMA_SERVER_URL")
+        self.api_key = "unused"
+        self.temperature = 0.6
+        self.http_client = httpx_client if use_httpx_client else None
+
+# Set this flag from environment variable (default: True)
+USE_HTTPX_CLIENT_LOGGING = os.getenv("USE_HTTPX_CLIENT_LOGGING").lower() == "true"
+llm_config = LLMConfig(use_httpx_client=USE_HTTPX_CLIENT_LOGGING)
+
+llm_kwargs = {
+    "model": llm_config.model,
+    "base_url": llm_config.base_url,
+    "api_key": llm_config.api_key,
+    "temperature": llm_config.temperature,
+}
+if llm_config.http_client:
+    llm_kwargs["http_client"] = llm_config.http_client
+
+llm = ChatOpenAI(**llm_kwargs)
 
 
 model = llm.bind_tools(tools)
@@ -62,7 +77,6 @@ def call_llm(state: MessagesState) -> MessagesState:
     response = model.invoke([system] + state["messages"])
     return {"messages": [*state["messages"], response]}
 
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:9000/tools")
 
 def call_tools(state: MessagesState) -> MessagesState:
     from langchain_core.messages import ToolMessage
