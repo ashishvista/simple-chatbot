@@ -6,6 +6,8 @@ from tools import tools
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START
 import httpx
+import requests
+from mcp_client import call_mcp_tool
 
 load_dotenv()
 # Create a tool lookup dictionary for easy access
@@ -60,15 +62,17 @@ def call_llm(state: MessagesState) -> MessagesState:
     response = model.invoke([system] + state["messages"])
     return {"messages": [*state["messages"], response]}
 
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:9000/tools")
+
 def call_tools(state: MessagesState) -> MessagesState:
-    # Extract tool calls from the last AI message
     from langchain_core.messages import ToolMessage
     msgs = state["messages"]
     ai_msg = msgs[-1]
     results = []
     for tool_call in ai_msg.tool_calls:
-        tool_fn = tool_lookup.get(tool_call["name"])
-        obs = tool_fn.invoke(tool_call["args"])
+        tool_name = tool_call["name"]
+        args = tool_call["args"]
+        obs = call_mcp_tool(tool_name, args)
         results.append(ToolMessage(content=str(obs), tool_call_id=tool_call["id"]))
     return {"messages": [*msgs, *results]}
 
