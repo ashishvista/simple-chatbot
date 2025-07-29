@@ -29,7 +29,7 @@ class LoggingHTTPTransport(httpx.HTTPTransport):
 
 # Create a custom httpx.Client with the logging transport
 httpx_client = httpx.Client(transport=LoggingHTTPTransport())
-langchain.debug = True
+langchain.debug = os.getenv("LANGCHAIN_DEBUG", "false").lower() == "true"
 
 from langchain_openai import ChatOpenAI
 
