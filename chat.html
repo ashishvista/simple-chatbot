@@ -4,21 +4,109 @@
     <meta charset="UTF-8">
     <title>Simple Chatbot</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        #chat-box { border: 1px solid #ccc; padding: 20px; height: 400px; overflow-y: auto; background: #fafafa; }
-        .user { color: #0074D9; margin-bottom: 8px; }
-        .bot { color: #2ECC40; margin-bottom: 16px; }
-        #input-area { margin-top: 20px; }
-        #message { width: 80%; padding: 8px; }
-        #send { padding: 8px 16px; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(120deg, #e0eafc, #cfdef3 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(60,60,120,0.12);
+            padding: 32px 24px 24px 24px;
+        }
+        h2 {
+            text-align: center;
+            color: #0074D9;
+            margin-bottom: 24px;
+            letter-spacing: 1px;
+        }
+        #chat-box {
+            border: 1px solid #e3e3e3;
+            border-radius: 10px;
+            padding: 20px;
+            height: 350px;
+            overflow-y: auto;
+            background: #f8fafc;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .user, .bot {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-break: break-word;
+            font-size: 1rem;
+        }
+        .user {
+            background: #e6f0fa;
+            color: #0074D9;
+            margin-left: auto;
+            text-align: right;
+            border-bottom-right-radius: 2px;
+        }
+        .bot {
+            background: #eafbe7;
+            color: #2ECC40;
+            margin-right: auto;
+            text-align: left;
+            border-bottom-left-radius: 2px;
+        }
+        #input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #message {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        #message:focus {
+            border: 1.5px solid #0074D9;
+        }
+        #send {
+            background: linear-gradient(90deg, #0074D9 60%, #2ECC40 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 22px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: background 0.2s, transform 0.1s;
+        }
+        #send:disabled {
+            background: #b3c6d9;
+            cursor: not-allowed;
+        }
+        #send:active {
+            transform: scale(0.97);
+        }
+        @media (max-width: 600px) {
+            .container { padding: 12px 4px; }
+            #chat-box { height: 250px; }
+        }
     </style>
 </head>
 <body>
-    <h2>Simple Chatbot</h2>
-    <div id="chat-box"></div>
-    <div id="input-area">
-        <input type="text" id="message" placeholder="Type your message..." autofocus />
-        <button id="send">Send</button>
+    <div class="container">
+        <h2>Simple Chatbot</h2>
+        <div id="chat-box"></div>
+        <div id="input-area">
+            <input type="text" id="message" placeholder="Type your message..." autocomplete="off" autofocus />
+            <button id="send" type="button">Send</button>
+        </div>
     </div>
     <script>
         let sessionid = null;
@@ -43,6 +131,7 @@
             const msg = messageInput.value.trim();
             if (!msg) return;
             sendBtn.disabled = true;
+            messageInput.disabled = true;
             try {
                 const res = await fetch('http://localhost:8000/chat', {
                     method: 'POST',
@@ -54,15 +143,22 @@
                 sessionid = data.sessionid;
                 renderHistory(data.history);
                 messageInput.value = '';
+                messageInput.focus();
             } catch (err) {
                 alert('Error: ' + err.message);
             } finally {
                 sendBtn.disabled = false;
+                messageInput.disabled = false;
             }
         }
 
-        sendBtn.onclick = sendMessage;
-        messageInput.onkeydown = e => { if (e.key === 'Enter') sendMessage(); };
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html>
