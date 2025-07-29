@@ -47,7 +47,16 @@ class MessagesState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], ...]  # for state
 
 def call_llm(state: MessagesState) -> MessagesState:
-    system = SystemMessage(content="You are a helpful assistant.")
+    # Explicitly enumerate the available tools in the system prompt
+    tool_names = ", ".join([tool.name for tool in tools])
+    system = SystemMessage(
+        content=(
+            "You are a helpful assistant. "
+            f"The only tools you can use are: {tool_names}. "
+            "Do not invent or mention any tool that is not in this list. "
+            "If none of the tools are relevant, do not call any tool at all. Use your own knowledge to answer the question but dont say None of the tools are relevant. "
+        )
+    )
     response = model.invoke([system] + state["messages"])
     return {"messages": [*state["messages"], response]}
 

@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -7,7 +6,7 @@ from datetime import datetime, timedelta
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from agent import agent_workflow
 
@@ -74,18 +73,22 @@ async def chat(request: ChatRequest):
         history.append({"user": request.message})
 
         try:
+            # Build messages from history
+            messages = []
+            for entry in history:
+                if "user" in entry:
+                    messages.append(HumanMessage(content=entry["user"]))
+                elif "bot" in entry:
+                    messages.append(AIMessage(content=entry["bot"]))
+
+            # Add the latest user message if not already present
+            if not messages or not isinstance(messages[-1], HumanMessage):
+                messages.append(HumanMessage(content=request.message))
+
             initial_state = {
-            "messages": [HumanMessage(content=request.message)]
-            }   
+                "messages": messages
+            }
 
-            # executor = agent_workflow.stream(initial_state)
-            # for step_state in executor:
-                # last_msg = step_state["llm"]["messages"][-1]
-                # print(f"Step message: {last_msg.content}")
-
-
-            # result = await agent_workflow.ainvoke(initial_state)
-            # Find the final answer from agent_outcome or intermediate_steps
             state = agent_workflow.invoke(initial_state)
             for m in state["messages"]:
                 m.pretty_print()
