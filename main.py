@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
 from guardrails import Guard, OnFailAction
-from guardrails.hub import ProfanityFree, DetectJailbreak
+from guardrails.hub import ProfanityFree,  ToxicLanguage, CompetitorCheck, RegexMatch, BanList, ValidLength, DetectJailbreak
+
 
 from agent import agent_workflow
 
@@ -32,7 +33,12 @@ app.add_middleware(
 # Define the guard with both validators using explicit classes and exception on fail
 guard = Guard().use(
     ProfanityFree(on_fail=OnFailAction.EXCEPTION),
-).use(
+).use_many(
+    ToxicLanguage(threshold=0.5, on_fail=OnFailAction.EXCEPTION),
+    # CompetitorCheck(["Apple", "Microsoft"], on_fail=OnFailAction.EXCEPTION),
+    # RegexMatch(regex=r"\d{3}-\d{3}-\d{4}", on_fail=OnFailAction.EXCEPTION),
+    # BanList(banned_words=["secret", "codename"], max_l_dist=1, on_fail=OnFailAction.EXCEPTION),
+    # ValidLength(min=1, max=200, on_fail=OnFailAction.EXCEPTION),
     DetectJailbreak(on_fail=OnFailAction.EXCEPTION)
 )
 
