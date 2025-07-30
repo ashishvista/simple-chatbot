@@ -50,14 +50,21 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     sessionid: str
     response: str
-    history: List[Dict[str, str]]
+    # history: List[Dict[str, str]]
 
 # --- Session Management ---
 sessions: Dict[str, Dict[str, any]] = {}
 
 def get_or_create_session(sessionid: Optional[str]) -> str:
-    if sessionid and sessionid in sessions:
-        sessions[sessionid]["last_accessed"] = datetime.now()
+    if sessionid:
+        if sessionid in sessions:
+            sessions[sessionid]["last_accessed"] = datetime.now()
+        else:
+            # Create a new session with the provided sessionid
+            sessions[sessionid] = {
+                "history": [],
+                "last_accessed": datetime.now()
+            }
         return sessionid
     new_id = str(uuid.uuid4())
     sessions[new_id] = {
@@ -133,7 +140,7 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             sessionid=sessionid,
             response=reply_text,
-            history=history
+            # history=history
         )
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
