@@ -1,5 +1,7 @@
 start ollama
 
+use this 
+Python 3.10.13
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
