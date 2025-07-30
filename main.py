@@ -56,15 +56,8 @@ class ChatResponse(BaseModel):
 sessions: Dict[str, Dict[str, any]] = {}
 
 def get_or_create_session(sessionid: Optional[str]) -> str:
-    if sessionid:
-        if sessionid in sessions:
-            sessions[sessionid]["last_accessed"] = datetime.now()
-        else:
-            # Create a new session with the provided sessionid
-            sessions[sessionid] = {
-                "history": [],
-                "last_accessed": datetime.now()
-            }
+    if sessionid and sessionid in sessions:
+        sessions[sessionid]["last_accessed"] = datetime.now()
         return sessionid
     new_id = str(uuid.uuid4())
     sessions[new_id] = {

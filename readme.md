@@ -18,7 +18,7 @@ pip install -r requirements.txt
 
 curl -X POST "http://localhost:8000/chat" \            
   -H "Content-Type: application/json" \
-  -d '{"sessionid": null, "message": "What is the interest rate of gold loan in rapipay?"}'
+  -d '{"sessionid": "test", "message": "What is the interest rate of gold loan in rapipay?"}'
 
 
 
@@ -44,7 +44,7 @@ curl -X POST "http://localhost:8000/chat" \
 
  curl -X POST "http://localhost:8000/chat" \
   -H "Content-Type: application/json" \
-  -d '{"sessionid": null, "message": "tell me who is the president of india"}'
+  -d '{"sessionid": "test", "message": "tell me who is the president of india"}'
 
 
 curl -X POST "http://localhost:8000/chat" \
@@ -53,10 +53,28 @@ curl -X POST "http://localhost:8000/chat" \
 
 curl -X POST "http://localhost:8000/chat" \
   -H "Content-Type: application/json" \
-  -d '{"sessionid":null , "message": "name some great indian badminton players"}'
+  -d '{"sessionid":"test" , "message": "tell some great indian badminton players"}'
 
 
 
 
 
     curl -X POST "http://localhost:8000/chat" \
+
+
+
+how to test chatbot using promptfoo if i have this endpoint and also for multi turn conversation here is the curl for the endpoint
+curl -X POST "http://localhost:8000/chat"
+-H "Content-Type: application/json"
+-d '{"sessionid": "test", "message": "tell me who is the president of india"}'
+
+response body--
+
+{"sessionid":"test","response":"PV Sindhu, Saina Nehwal, Manavi Srinivasan, and Bhavani Shree are among the prominent Indian badminton players. Sindhu has won multiple international titles, while Nehwal was a key player in India's badminton history. Srinivasan and Shree have also made significant contributions to the sport."}
+
+
+now this sessionid can be passed to next test case for multi turn conversation
+
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionid":"test" , "message": "tell some great indian badminton players"}'

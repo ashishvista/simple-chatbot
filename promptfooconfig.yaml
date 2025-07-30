@@ -1,44 +1,28 @@
 providers:
-  - id: my_chatbot
-    type: custom
-    request:
-      url: http://localhost:8000/chat
-      method: POST
+  - id: http
+    config:
+      url: 'http://localhost:8000/chat'
+      method: 'POST'
       headers:
-        Content-Type: application/json
-      body: |
-        {
-          "sessionid": "{{sessionId}}",
-          "message": "{{message}}"
-        }
-    # Extract both response and session ID from the API response
-    response: 'response'  # The chatbot's reply
-    vars:
-      # This captures the sessionId from the API response for use in subsequent calls
-      sessionId: '{{(sessionId || null) ?? body.sessionid}}'
+        'Content-Type': 'application/json'
+      body:
+        sessionid: 'test'
+        message: '{{message}}'
+      transformResponse: 'json.response'
+
+prompts:
+  - "{{message}}"
 
 tests:
-  - description: "Multi-turn conversation with session persistence"
-    tests:
-      - vars:
-          message: "Hello"
-          sessionId: null  # Let the server generate the first session ID
-        assert:
-          - type: contains
-            value: "Hi"
-          - type: javascript
-            value: body.sessionid !== null && body.sessionid !== undefined
-            description: "Server should return a session ID"
-      
-      - vars:
-          message: "What's the weather today?"
-          # sessionId is automatically carried forward from previous response
-        assert:
-          - type: contains
-            value: "weather"
-      
-      - vars:
-          message: "What about tomorrow?"
-        assert:
-          - type: contains
-            value: "forecast"
+  - provider: http
+    vars:
+      message: "tell me who is the president of india"
+    assert:
+      - type: llm-rubric
+        value: "The response should mention the current president of India"
+  - provider: http
+    vars:
+      message: "what is his age?"
+    assert:
+      - type: llm-rubric
+        value: "The response should mention the president's age"

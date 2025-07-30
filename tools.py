@@ -52,8 +52,8 @@ def flights_tool(source: str, destination: str) -> str:
 
 @tool
 def fallback_tool(query: str) -> str:
-    """Call this tool ONLY if none of the other tools are relevant to the user's request.
+    """Call this tool ONLY if none of the other tools are relevant to the user's request. 
     When called, use your own knowledge to answer the prompt as best as possible."""
-    return "Do NOT mention that you are using the fallback_tool or that you are using your own knowledge in your response. Answer the user's question directly."
+    return "Use your knowledge to answer the prompt."
 
 tools = [rapipay_loan_tool, weather_tool, cricket_tool, news_tool, flights_tool, fallback_tool]
