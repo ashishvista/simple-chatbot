@@ -7,6 +7,8 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
+from guardrails import Guard, OnFailAction
+from guardrails.hub import ProfanityFree, DetectJailbreak
 
 from agent import agent_workflow
 
@@ -25,6 +27,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Define the guard with both validators using explicit classes and exception on fail
+guard = Guard().use(
+    ProfanityFree(on_fail=OnFailAction.EXCEPTION),
+).use(
+    DetectJailbreak(on_fail=OnFailAction.EXCEPTION)
 )
 
 # --- Models ---
@@ -63,6 +72,15 @@ def cleanup_old_sessions(hours=2):
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
+        # Guardrails AI check for user input
+        try:
+            guard.validate(request.message)
+        except Exception:
+            return ChatResponse(
+                sessionid=request.sessionid or "",
+                response="⚠️ Your message was blocked due to unsafe or inappropriate content.",
+                history=[]
+            )
         sessionid = get_or_create_session(request.sessionid)
         session_data = sessions[sessionid]
         history = session_data["history"]
@@ -94,6 +112,11 @@ async def chat(request: ChatRequest):
                 m.pretty_print()
 
             reply_text = unwrap_final(state)
+            # Guardrails AI check for chatbot response
+            try:
+                guard.validate(reply_text)
+            except Exception:
+                reply_text = "⚠️ The chatbot's response was blocked due to unsafe or inappropriate content."
             history.append({"bot": reply_text})
         except Exception as e:
             logger.error(f"Agent error: {str(e)}", exc_info=True)
