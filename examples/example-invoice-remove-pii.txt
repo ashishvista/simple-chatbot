@@ -1,0 +1,89 @@
+Below is th text from PDF document after OCR. Fix the text and spelling issues.
+Remove Any personal information (like name, first name, last name, address, street, phone number email) replacing it with "ANONYMIZED". 
+
+Convert to JSON using the following schema:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "invoiceNumber": {
+      "type": "string",
+      "description": "Unique identifier for the invoice"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of invoice issue"
+    },
+    "dueDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date for payment"
+    },
+    "client": {
+      "type": "object",
+      "properties": {
+        "clientName": {
+          "type": "string",
+          "description": "Name of the client"
+        },
+        "clientAddress": {
+          "type": "string",
+          "description": "Address of the client"
+        },
+        "clientEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the client"
+        }
+      },
+      "required": ["clientName", "clientAddress"]
+    },
+    "items": {
+      "type": "array",
+      "description": "List of items in the invoice",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the item"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of the item"
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Price per unit"
+          },
+          "total": {
+            "type": "number",
+            "description": "Total price for the item"
+          }
+        },
+        "required": ["description", "quantity", "unitPrice", "total"]
+      }
+    },
+    "subtotal": {
+      "type": "number",
+      "description": "Total amount before tax"
+    },
+    "tax": {
+      "type": "number",
+      "description": "Applicable tax amount"
+    },
+    "total": {
+      "type": "number",
+      "description": "Total amount after tax"
+    }
+  },
+  "required": ["invoiceNumber", "date", "client", "items", "subtotal", "tax", "total"]
+}
+```
+
+
+Input text:
+
