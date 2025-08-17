@@ -1,51 +1,54 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from tools import rapipay_loan_tool, weather_tool, cricket_tool, news_tool, flights_tool, fallback_tool
+from mcp.server.fastmcp import FastMCP
+import json
+import asyncio
 
-app = FastAPI()
+# Alias imports to avoid recursion
+from tools import (
+    rapipay_loan_tool as rapipay_loan_impl,
+    weather_tool as weather_impl,
+    cricket_tool as cricket_impl,
+    news_tool as news_impl,
+    flights_tool as flights_impl,
+    fallback_tool as fallback_impl,
+)
 
-class QueryModel(BaseModel):
-    query: str
+mcp = FastMCP("lots of tools")
 
-class CityModel(BaseModel):
-    city: str
+# Register tools via MCP decorators, call the aliased implementations
+@mcp.tool()
+def rapipay_loan_tool(params):
+    return rapipay_loan_impl(params)
 
-class CricketModel(BaseModel):
-    team1: str
-    team2: str
+@mcp.tool()
+def weather_tool(params):
+    return weather_impl(params)
 
-class NewsModel(BaseModel):
-    country: str
+@mcp.tool()
+def cricket_tool(params):
+    return cricket_impl(params)
 
-class FlightsModel(BaseModel):
-    source: str
-    destination: str
+@mcp.tool()
+def news_tool(params):
+    return news_impl(params)
 
-@app.post("/tools/rapipay_loan_tool")
-def call_rapipay_loan_tool(data: QueryModel):
-    return {"result": rapipay_loan_tool(data.query)}
+@mcp.tool()
+def flights_tool(params):
+    return flights_impl(params)
 
-@app.post("/tools/weather_tool")
-def call_weather_tool(data: CityModel):
-    return {"result": weather_tool(data.city)}
+@mcp.tool()
+def fallback_tool(params):
+    return fallback_impl(params)
 
-@app.post("/tools/cricket_tool")
-def call_cricket_tool(data: CricketModel):
-    return {"result": cricket_tool(data.team1, data.team2)}
+# Use MCP's streamable HTTP app
+app = mcp.streamable_http_app
 
-@app.post("/tools/news_tool")
-def call_news_tool(data: NewsModel):
-    return {"result": news_tool(data.country)}
-
-@app.post("/tools/flights_tool")
-def call_flights_tool(data: FlightsModel):
-    return {"result": flights_tool(data.source, data.destination)}
-
-@app.post("/tools/fallback_tool")
-def call_fallback_tool(data: QueryModel):
-    return {"result": fallback_tool(data.query)}
-
-# Add this at the end of the file to run with: python mcp_server.py
+# Run server in appropriate mode
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("mcp_server:app", host="0.0.0.0", port=9000, reload=True)
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--stdio":
+        # MCP stdio mode for n8n and other MCP clients
+        mcp.run()
+    else:
+        # HTTP mode for direct API access
+        import uvicorn
+        uvicorn.run("mcp_server:app", host="0.0.0.0", port=9000, reload=True)
