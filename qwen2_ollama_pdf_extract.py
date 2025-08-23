@@ -5,18 +5,18 @@ from pdf2image import convert_from_path
 import base64
 import io
 
-OLLAMA_HOST = "http://44.204.80.225:11434"
-MODEL_NAME = "qwen2.5vl:32b"
+OLLAMA_HOST = "http://13.222.212.103:11434"
+MODEL_NAME = "qwen2.5vl:7b"
 
 def pdf_to_base64_images(pdf_path):
     """
-    Converts each page of the PDF to a base64-encoded PNG image.
-    Also saves each PNG to disk in the same directory as the PDF.
+    Converts only the first page of the PDF to a base64-encoded PNG image.
+    Also saves the PNG to disk in the same directory as the PDF.
     """
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"PDF file not found: {pdf_path}")
     try:
-        pages = convert_from_path(pdf_path)
+        pages = convert_from_path(pdf_path, first_page=1, last_page=1)
     except Exception as e:
         raise RuntimeError(
             "pdf2image requires Poppler to be installed and in your PATH. "
@@ -43,8 +43,8 @@ def extract_data_with_qwen2(images_base64, prompt_instructions=None):
     Calls Ollama's /api/chat endpoint with Minicpm-v:8b to extract data as markdown.
     """
     prompt = (
-        "Perform OCR on the attached document images and extract all relevant data as accurately as possible. "
-        "Return the extracted data in a clear and structured markdown format, using headings and tables where appropriate."
+        "Perform OCR  and convert it to markdown format." \
+
     )
     if prompt_instructions:
         prompt += f" {prompt_instructions}"
@@ -83,7 +83,7 @@ def extract_pdf_to_markdown(pdf_path, prompt_instructions=None):
 # Example usage:
 if __name__ == "__main__":
     # Replace with your PDF path
-    pdf_path = "examples/example-mri.pdf"
-    prompt_instructions = "Extract all fields as accurately as possible."
+    pdf_path = "examples/bank-statement.pdf"
+    prompt_instructions = ""
     extracted_markdown = extract_pdf_to_markdown(pdf_path, prompt_instructions)
     print(extracted_markdown)

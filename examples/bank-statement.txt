@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "Account Name": { "type": "string" },
+    "Address": { "type": "string" },
+    "Date": { "type": "string" },
+    "Account Number": { "type": "string" },
+    "Account Description": { "type": "string" },
+    "Branch": { "type": "string" },
+    "Drawing Power": { "type": "string" },
+    "Interest Rate(% p.a.)": { "type": "string" },
+    "MOD Balance": { "type": "string" },
+    "CIF No.": { "type": "string" },
+    "CKYCR Number": { "type": "string" },
+    "IFS Code": { "type": "string" },
+    "MICR Code": { "type": "string" },
+    "Nomination Registered": { "type": "string" },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Txn Date": { "type": "string" },
+          "Date": { "type": "string" },
+          "Description": { "type": "string" },
+          "Ref No./Cheque No": { "type": "string" },
+          "Debit": { "type": "string" },
+          "Credit": { "type": "string" },
+          "Balance": { "type": "string" }
+        },
+        "required": [
+          "Txn Date",
+          "Date",
+          "Description",
+          "Ref No./Cheque No",
+          "Debit",
+          "Credit",
+          "Balance"
+        ]
+      }
+    }
+  },
+  "required": [
+    "Account Name",
+    "Address",
+    "Date",
+    "Account Number",
+    "Account Description",
+    "Branch",
+    "Drawing Power",
+    "Interest Rate(% p.a.)",
+    "MOD Balance",
+    "CIF No.",
+    "CKYCR Number",
+    "IFS Code",
+    "MICR Code",
+    "Nomination Registered",
+    "transactions"
+  ]
+}
